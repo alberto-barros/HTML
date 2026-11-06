@@ -1025,7 +1025,7 @@ function banner(tipo, titulo, texto, botao) {
   bn.className = `banner is-on is-${tipo}`;
   const x = el("button", { type: "button", class: "banner-x", "aria-label": "Fechar", text: "×" });
   x.addEventListener("click", () => bn.classList.remove("is-on"));
-  bn.replaceChildren(el("div", {}, el("strong", { text: titulo }), el("span", { text: texto })), botao, x);
+  bn.replaceChildren(...[el("div", {}, el("strong", { text: titulo }), el("span", { text: texto })), botao, x].filter(Boolean));
 }
 const fecharBanner = () => $("banner").classList.remove("is-on");
 
