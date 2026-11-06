@@ -187,8 +187,8 @@ details.dica p { margin: 6px 0 0; color: #c6cbd8; line-height: 1.5; }
    ^ > v <  largada do robô e para onde ele olha */
 const FASES = [
   { numero: 1, tema: "Sequência", titulo: "Primeiros passos",
-    texto: "O robô só faz o que o programa manda, um bloco de cada vez. Ligue o Início a blocos Andar até a bandeira e termine com o Fim.",
-    dica: "Toque no Início para selecioná-lo e depois em Andar na paleta: o bloco novo entra embaixo, já ligado. Repita e feche com o Fim.",
+    texto: "O robô só faz o que o programa manda, um bloco de cada vez. Ligue o Início a blocos Andar até o robô pisar na bandeira.",
+    dica: "Toque no Início para selecioná-lo e depois em Andar na paleta: o bloco novo entra embaixo, já ligado. Quando o robô pisa na bandeira, a fase termina.",
     referencia: 4, limite: 0,
     labirinto: ["#######", "#>...B#", "#######"] },
   { numero: 2, tema: "Sequência", titulo: "A primeira curva",
@@ -198,23 +198,23 @@ const FASES = [
     labirinto: ["#######", "#>..###", "###.###", "###..B#", "#######"] },
   { numero: 3, tema: "Repetição", titulo: "Corredor comprido",
     texto: "São 13 casas e você só pode usar 4 blocos. Uma seta pode voltar para um bloco anterior: isso cria uma repetição.",
-    dica: "Decisão com “Chegou à bandeira?”: Sim vai para o Fim, Não vai para um Andar, e a seta do Andar volta para a Decisão.",
-    referencia: 2, limite: 4,
+    dica: "Ligue a saída de um Andar de volta nele mesmo: o robô anda sem parar até pisar na bandeira.",
+    referencia: 1, limite: 4,
     labirinto: ["################", "#>............B#", "################"] },
   { numero: 4, tema: "Repetição", titulo: "A escada",
     texto: "A escada repete o mesmo desenho de passos. Descubra o padrão e repita só ele.",
-    dica: "O padrão é: Andar, Virar →, Andar, Virar ←. Coloque-o no Não de uma Decisão “Chegou à bandeira?” e volte a seta para ela.",
-    referencia: 5, limite: 6,
+    dica: "O padrão é: Andar, Virar →, Andar, Virar ←. Ligue a saída do último Virar de volta ao primeiro Andar.",
+    referencia: 4, limite: 6,
     labirinto: ["#########", "#>.######", "##..#####", "###..####", "####..###", "#####B###", "#########"] },
   { numero: 5, tema: "Decisão", titulo: "Siga o corredor",
     texto: "Agora o caminho faz curvas diferentes. Use os sensores para o robô decidir sozinho quando andar e para que lado virar.",
-    dica: "Na repetição: se a frente está livre, ande. Senão, se a esquerda está livre, vire à esquerda; senão, vire à direita.",
-    referencia: 6, limite: 8,
+    dica: "Na repetição: se a frente está livre, ande. Senão, se a esquerda está livre, vire à esquerda; senão, vire à direita. Ligue as saídas de volta à primeira Decisão.",
+    referencia: 5, limite: 8,
     labirinto: ["##########", "#>....####", "#####.####", "#####...##", "#######.##", "#..B###.##", "#.#####.##", "#.......##", "##########"] },
   { numero: 6, tema: "Decisão + repetição", titulo: "O labirinto",
     texto: "Um labirinto de verdade, com becos sem saída. Uma estratégia clássica: andar sempre com a mão direita encostada na parede.",
-    dica: "Se a direita está livre: vire à direita e ande. Senão, se a frente está livre: ande. Senão: vire à esquerda. Repita até a bandeira.",
-    referencia: 6, limite: 10,
+    dica: "Se a direita está livre: vire à direita e ande. Senão, se a frente está livre: ande. Senão: vire à esquerda. Ligue as saídas de volta à primeira Decisão.",
+    referencia: 5, limite: 10,
     labirinto: ["#########", "#>..#...#", "##.##.#.#", "#...#.#.#", "#.#...#.#", "#.#.###.#", "#.#...#B#", "#...#...#", "#########"] },
 ];
 
@@ -271,6 +271,7 @@ function executar(prog, lab) {
       if (!livre(lab, st.r + dr, st.c + dc)) { passos.push({ n: n.id, acao: "batida", ...st }); return fim("parede", n.id); }
       st = { ...st, r: st.r + dr, c: st.c + dc };
       passos.push({ n: n.id, acao: "andar", ...st });
+      if (naMeta(lab, st)) return fim("chegou", n.id); // pisou na bandeira: o jogo termina
     } else if (n.tipo === "esquerda" || n.tipo === "direita") {
       const giro = n.tipo === "esquerda" ? -1 : 1;
       st = { ...st, d: (st.d + giro + 4) % 4 };
