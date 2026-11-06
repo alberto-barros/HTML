@@ -44,15 +44,17 @@ button { cursor: pointer; }
 .palco { position: relative; min-height: 0; min-width: 0; overflow: hidden; background: var(--bg); }
 .cena { position: absolute; inset: 0; }
 .cena canvas { display: block; width: 100%; height: 100%; touch-action: none; }
-.cartao { position: absolute; top: 12px; left: max(12px, env(safe-area-inset-left, 0px)); width: min(340px, calc(100% - 24px));
+.cartao { position: absolute; top: 12px; left: max(12px, env(safe-area-inset-left, 0px)); width: min(270px, calc(100% - 24px));
   background: color-mix(in srgb, var(--surface) 90%, transparent); backdrop-filter: blur(8px); border: 1px solid var(--line);
-  border-radius: 12px; padding: 14px 16px; display: grid; gap: 6px; cursor: pointer; }
+  border-radius: 10px; padding: 9px 12px; display: grid; gap: 4px; cursor: pointer; font-size: 12.5px; }
+.cartao-abrir { display: none; margin: 0; font-size: 11.5px; color: var(--muted); }
+.cartao.is-mini .cartao-abrir { display: block; }
 .cartao.is-mini .cartao-texto, .cartao.is-mini .cartao-desafio, .cartao.is-mini details { display: none; }
 .cartao-kicker { margin: 0; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
-.cartao-titulo { margin: 0; font-size: 18px; font-weight: 650; text-wrap: balance; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cartao-titulo { margin: 0; font-size: 15px; font-weight: 650; text-wrap: balance; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .ok-pill { font-size: 11px; font-weight: 600; color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); padding: 2px 8px; border-radius: 10px; }
-.cartao-texto { margin: 0; color: #c6cbd8; line-height: 1.5; }
-.cartao-desafio { margin: 0; font-size: 12.5px; color: var(--aviso); }
+.cartao-texto { margin: 0; color: #c6cbd8; line-height: 1.45; }
+.cartao-desafio { margin: 0; font-size: 12px; color: var(--aviso); }
 details.dica summary { cursor: pointer; color: var(--roxo); font-weight: 600; font-size: 13px; }
 details.dica p { margin: 6px 0 0; color: #c6cbd8; line-height: 1.5; }
 .palco-topo { position: absolute; top: 12px; right: max(12px, env(safe-area-inset-right, 0px)); display: flex; gap: 8px; }
@@ -332,6 +334,7 @@ function ler(k) { try { return JSON.parse(localStorage.getItem(k) ?? "null"); } 
 function gravar(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch {} }
 const K_PROG = n => `robo-lab-prog-${n}`;
 let progresso = ler("robo-lab-progresso") || { liberada: 1, fases: {} };
+progresso.liberada = FASES.length; // todas as fases liberadas
 let faseAtual = Math.min(ler("robo-lab-fase") || 1, progresso.liberada);
 
 /* ---------- Editor de fluxograma ---------- */
@@ -767,7 +770,7 @@ class Cena {
 
   setLabirinto(lab) {
     this.lab = lab;
-    for (const o of [...this.mundo.children]) { this.mundo.remove(o); o.traverse?.(m => { m.geometry?.dispose(); m.material?.map?.dispose(); m.material?.dispose?.(); }); }
+    for (const o of [...this.mundo.children]) { this.mundo.remove(o); o.traverse?.(m => { m.geometry?.dispose(); for (const mt of [].concat(m.material || [])) { mt.map?.dispose(); mt.dispose(); } }); }
     // chão desenhado num canvas, uma casa por 32px
     const cv = document.createElement("canvas"); cv.width = lab.W * 64; cv.height = lab.H * 64;
     const ctx = cv.getContext("2d");
@@ -991,6 +994,7 @@ function desenharCartao() {
     el("p", { class: "cartao-texto", text: f.texto + (f.limite ? ` Limite: ${b(f.limite)}.` : "") }),
     el("p", { class: "cartao-desafio", text: p?.concluida ? `Seu melhor: ${b(p.melhorBlocos)}. Desafio: dá para fazer com ${f.referencia}?` : `Desafio extra: chegar usando só ${b(f.referencia)}.` }),
     el("details", { class: "dica" }, el("summary", { text: "Dica" }), el("p", { text: f.dica })),
+    el("p", { class: "cartao-abrir", text: "Toque para ver a missão e a dica" }),
   );
 }
 $("cartao").addEventListener("click", e => { if (!e.target.closest("details")) $("cartao").classList.toggle("is-mini"); });
@@ -1014,7 +1018,7 @@ function irPara(n) {
   historico = []; ligando = null; destaque = null;
   sel = prog.nos.length === 1 ? { tipo: "no", id: prog.nos[0].id } : null;
   fecharBanner(); desenhar(); atualizarContador(); desenharCartao(); desenharFases();
-  $("cartao").classList.remove("is-mini");
+  $("cartao").classList.add("is-mini");
 }
 
 function botaoExec() {
