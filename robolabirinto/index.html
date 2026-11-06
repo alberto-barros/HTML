@@ -709,8 +709,8 @@ class Cena {
     this.renderer.shadowMap.type = T.PCFSoftShadowMap;
     host.append(this.renderer.domElement);
     this.scene = new T.Scene();
-    this.scene.background = new T.Color(0x9fd3f2);
-    this.scene.fog = new T.Fog(0x9fd3f2, 35, 75);
+    this.scene.background = new T.Color(0x0d1018);
+    this.scene.fog = new T.Fog(0x0d1018, 40, 90);
     this.camera = new T.PerspectiveCamera(50, 1, 0.1, 100);
     this.scene.add(new T.HemisphereLight(0xcfd8ff, 0x1a1f2e, 0.55));
     const sol = new T.DirectionalLight(0xffffff, 0.9);
@@ -784,7 +784,7 @@ class Cena {
     // chão desenhado num canvas, uma casa por 32px
     const cv = document.createElement("canvas"); cv.width = lab.W * 64; cv.height = lab.H * 64;
     const ctx = cv.getContext("2d");
-    // casas de parede ficam transparentes: aparece a grama por baixo
+    ctx.fillStyle = "#0b0e15"; ctx.fillRect(0, 0, cv.width, cv.height);
     const { inicio, meta } = lab;
     lab.rows.forEach((l, r) => [...l].forEach((ch, c) => {
       if (ch === "#") return;
@@ -796,10 +796,10 @@ class Cena {
       ctx.fillStyle = (i + j) % 2 ? "#0f121a" : "#c9cfdd"; ctx.fillRect(meta.c * 64 + 2 + i * 15, meta.r * 64 + 2 + j * 15, 15, 15);
     }
     const tex = new T.CanvasTexture(cv); tex.anisotropy = 4;
-    const chao = new T.Mesh(new T.PlaneGeometry(lab.W, lab.H), new T.MeshStandardMaterial({ map: tex, roughness: 0.9, transparent: true }));
+    const chao = new T.Mesh(new T.PlaneGeometry(lab.W, lab.H), new T.MeshStandardMaterial({ map: tex, roughness: 0.9 }));
     chao.rotation.x = -Math.PI / 2; chao.receiveShadow = true; this.mundo.add(chao);
-    const grande = new T.Mesh(new T.PlaneGeometry(160, 160), new T.MeshStandardMaterial({ map: this.texturaGrama(), roughness: 1 }));
-    grande.rotation.x = -Math.PI / 2; grande.position.y = -0.01; grande.receiveShadow = true; this.mundo.add(grande);
+    const grande = new T.Mesh(new T.PlaneGeometry(80, 80), new T.MeshStandardMaterial({ color: 0x0b0e15, roughness: 1 }));
+    grande.rotation.x = -Math.PI / 2; grande.position.y = -0.01; this.mundo.add(grande);
     // paredes
     // paredes baixas: uma mureta em cada borda entre chão e parede
     const ALT = 0.3, ESP = 0.16;
@@ -835,25 +835,6 @@ class Cena {
     const pm = this.pos(meta.r, meta.c); fl.position.set(pm.x, 0, pm.z);
     this.mundo.add(fl);
     this.voltarALargada(true);
-  }
-
-  texturaGrama() {
-    const n = 256, cv = document.createElement("canvas"); cv.width = cv.height = n;
-    const c = cv.getContext("2d");
-    c.fillStyle = "#4f9a3e"; c.fillRect(0, 0, n, n);
-    const tons = ["#5fae49", "#468c37", "#3e7f31", "#6cba52", "#559f42"];
-    for (let i = 0; i < 2600; i++) {
-      const x = Math.random() * n, y = Math.random() * n, h = 3 + Math.random() * 6;
-      c.strokeStyle = tons[i % tons.length]; c.lineWidth = 1 + Math.random();
-      c.beginPath(); c.moveTo(x, y); c.lineTo(x + (Math.random() - 0.5) * 3, y - h); c.stroke();
-    }
-    for (let i = 0; i < 18; i++) { // florzinhas
-      c.fillStyle = i % 3 ? "#f6e27a" : "#ffffff";
-      c.beginPath(); c.arc(Math.random() * n, Math.random() * n, 1.6, 0, Math.PI * 2); c.fill();
-    }
-    const t = new T.CanvasTexture(cv);
-    t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(80, 80); t.anisotropy = 4;
-    return t;
   }
 
   voltarALargada(instantaneo = false) {
