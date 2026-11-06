@@ -27,7 +27,7 @@ button, select { font: inherit; color: inherit; }
 button { cursor: pointer; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-.app { height: 100%; display: grid; grid-template-rows: auto 1fr; grid-template-columns: minmax(0, 1fr) minmax(360px, 460px); }
+.app { height: 100%; display: grid; grid-template-rows: auto 1fr; grid-template-columns: minmax(0, 1fr) var(--painel, 420px); }
 .topo { grid-column: 1 / -1; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
   padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
   border-bottom: 1px solid var(--line); background: var(--surface); }
@@ -74,7 +74,11 @@ details.dica p { margin: 6px 0 0; color: #c6cbd8; line-height: 1.5; }
 .banner.is-andando { border-color: color-mix(in srgb, var(--accent) 60%, transparent); }
 .banner-x { background: none; border: 0; font-size: 20px; color: var(--muted); padding: 0 4px; }
 
-.painel { display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; min-height: 0; border-left: 1px solid var(--line); background: var(--surface); }
+.divisor { position: absolute; top: 0; bottom: 0; left: -6px; width: 12px; cursor: col-resize; z-index: 5; touch-action: none; }
+.divisor::after { content: ""; position: absolute; top: 50%; left: 4px; width: 4px; height: 44px; margin-top: -22px; border-radius: 2px; background: var(--line); transition: background .15s; }
+.divisor:hover::after, .divisor.is-ativo::after, .divisor:focus-visible::after { background: var(--accent); }
+.divisor.is-ativo { left: -40px; width: 80px; }
+.painel { position: relative; display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; min-height: 0; border-left: 1px solid var(--line); background: var(--surface); }
 .painel-titulo { display: flex; align-items: center; gap: 8px; padding: 12px 16px 0; font-weight: 600; }
 .painel-titulo svg { color: var(--accent); }
 .barra { display: grid; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
@@ -132,6 +136,7 @@ details.dica p { margin: 6px 0 0; color: #c6cbd8; line-height: 1.5; }
   .palco { min-height: 320px; }
   .painel { border-left: 0; border-top: 1px solid var(--line); grid-template-rows: auto auto 420px auto; }
   .fases { margin-left: 0; }
+  .divisor { display: none; }
   .cartao { font-size: 13px; }
 }
 @media (prefers-reduced-motion: reduce) { .banner { transition: none; } }
@@ -157,6 +162,7 @@ details.dica p { margin: 6px 0 0; color: #c6cbd8; line-height: 1.5; }
   </section>
 
   <aside class="painel">
+    <div class="divisor" id="divisor" role="separator" aria-orientation="vertical" tabindex="0" title="Arraste para mudar a largura do fluxograma (dois cliques volta ao normal)"></div>
     <div class="painel-titulo">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg>
       Programa (fluxograma)
@@ -1109,11 +1115,38 @@ $("btNovo").addEventListener("click", () => {
     return;
   }
   clearTimeout(confirmarNovo); confirmarNovo = null; bt.textContent = "Nova sessão"; bt.classList.remove("is-perigo");
-  try { for (const k of Object.keys(sessionStorage)) if (k.startsWith("robo-lab-") && k !== "robo-lab-camera2") sessionStorage.removeItem(k); } catch {}
+  try { for (const k of Object.keys(sessionStorage)) if (k.startsWith("robo-lab-") && k !== "robo-lab-camera2" && k !== "robo-lab-painel") sessionStorage.removeItem(k); } catch {}
   progresso = { liberada: FASES.length, fases: {} };
   tentativa = 0;
   faseAtual = 0; irPara(1);
 });
+
+// divisor arrastável entre o cenário e o fluxograma
+(() => {
+  const app = $("app"), div = $("divisor");
+  const limitar = w => Math.round(Math.max(300, Math.min(w, app.clientWidth - 280)));
+  const aplicar = w => { app.style.setProperty("--painel", limitar(w) + "px"); };
+  const salva = ler("robo-lab-painel"); if (salva) aplicar(salva);
+  div.addEventListener("pointerdown", e => {
+    e.preventDefault(); div.setPointerCapture(e.pointerId); div.classList.add("is-ativo");
+    const mover = ev => aplicar(app.getBoundingClientRect().right - ev.clientX);
+    const soltar = () => {
+      div.classList.remove("is-ativo");
+      div.removeEventListener("pointermove", mover); div.removeEventListener("pointerup", soltar); div.removeEventListener("pointercancel", soltar);
+      gravar("robo-lab-painel", parseInt(getComputedStyle(app).getPropertyValue("--painel")) || null);
+    };
+    div.addEventListener("pointermove", mover); div.addEventListener("pointerup", soltar); div.addEventListener("pointercancel", soltar);
+  });
+  div.addEventListener("dblclick", () => { app.style.removeProperty("--painel"); gravar("robo-lab-painel", null); });
+  div.addEventListener("keydown", e => {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    e.preventDefault();
+    const atual = document.querySelector(".painel").getBoundingClientRect().width;
+    aplicar(atual + (e.key === "ArrowLeft" ? 30 : -30));
+    gravar("robo-lab-painel", parseInt(getComputedStyle(app).getPropertyValue("--painel")));
+  });
+  window.addEventListener("resize", () => { const v = parseInt(app.style.getPropertyValue("--painel")); if (v) aplicar(v); });
+})();
 
 // início
 rotuloCamera(); botaoExec();
