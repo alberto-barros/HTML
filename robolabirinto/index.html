@@ -144,6 +144,7 @@ details.dica p { margin: 6px 0 0; color: #c6cbd8; line-height: 1.5; }
       <div>Robô no labirinto<br><small>Sequência, decisão e repetição</small></div>
     </div>
     <nav class="fases" id="fases" aria-label="Fases"></nav>
+    <button class="acao" id="btNovo" type="button" title="Apaga os programas e o progresso desta aba">Nova sessão</button>
   </header>
 
   <section class="palco" id="palco">
@@ -331,8 +332,10 @@ const IC = {
 };
 
 /* ---------- Armazenamento local ---------- */
-function ler(k) { try { return JSON.parse(localStorage.getItem(k) ?? "null"); } catch { return null; } }
-function gravar(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+// sessionStorage: cada aba nova começa limpa; recarregar a página mantém o progresso da aba.
+function ler(k) { try { return JSON.parse(sessionStorage.getItem(k) ?? "null"); } catch { return null; } }
+function gravar(k, v) { try { v == null ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, JSON.stringify(v)); } catch {} }
+try { for (const k of Object.keys(localStorage)) if (k.startsWith("robo-lab-")) localStorage.removeItem(k); } catch {} // apaga o progresso antigo
 const K_PROG = n => `robo-lab-prog-${n}`;
 let progresso = ler("robo-lab-progresso") || { liberada: 1, fases: {} };
 progresso.liberada = FASES.length; // todas as fases liberadas
@@ -1095,6 +1098,22 @@ function terminar(res) {
     banner("ok", todas ? "🏆 Você concluiu todas as fases!" : titulo, texto);
   }
 }
+
+let confirmarNovo = null;
+$("btNovo").addEventListener("click", () => {
+  if (rodando) return;
+  const bt = $("btNovo");
+  if (!confirmarNovo) {
+    bt.textContent = "Apagar tudo e recomeçar?"; bt.classList.add("is-perigo");
+    confirmarNovo = setTimeout(() => { bt.textContent = "Nova sessão"; bt.classList.remove("is-perigo"); confirmarNovo = null; }, 3000);
+    return;
+  }
+  clearTimeout(confirmarNovo); confirmarNovo = null; bt.textContent = "Nova sessão"; bt.classList.remove("is-perigo");
+  try { for (const k of Object.keys(sessionStorage)) if (k.startsWith("robo-lab-") && k !== "robo-lab-camera2") sessionStorage.removeItem(k); } catch {}
+  progresso = { liberada: FASES.length, fases: {} };
+  tentativa = 0;
+  faseAtual = 0; irPara(1);
+});
 
 // início
 rotuloCamera(); botaoExec();
