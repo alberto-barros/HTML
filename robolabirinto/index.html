@@ -837,6 +837,12 @@ class Cena {
     if (instantaneo) this.camInstantanea = true;
   }
 
+  deslocamento() {
+    const w = this.host.clientWidth || 1, h = this.host.clientHeight || 1;
+    const r = this.reserva?.() ?? { x: 0, y: 0 };
+    return { w, h, dx: Math.min(r.x * 0.32, w * 0.16), dy: Math.min(r.y * 0.5, h * 0.14) };
+  }
+
   setModo(m) { this.modo = m; gravar("robo-lab-camera2", m); }
 
   alvoCamera() {
@@ -844,10 +850,13 @@ class Cena {
     const f = new T.Vector3(Math.sin(a), 0, Math.cos(a));
     if (this.modo === "geral") {
       // labirinto inteiro, visto de lado e de cima (cerca de 55°)
-      const vf = this.camera.fov * Math.PI / 180, hf = 2 * Math.atan(Math.tan(vf / 2) * this.camera.aspect);
+      // a área livre é a tela menos a faixa ocupada pelo cartão (o labirinto é desenhado deslocado para baixo e à direita)
+      const { dx, dy, w: tw, h: th } = this.deslocamento();
+      const vf = 2 * Math.atan(Math.tan(this.camera.fov * Math.PI / 360) * (th - 2 * dy) / th);
+      const hf = 2 * Math.atan(Math.tan(this.camera.fov * Math.PI / 360) * this.camera.aspect * (tw - 2 * dx) / tw);
       const elev = 55 * Math.PI / 180, w = this.lab.W + 0.4, h = this.lab.H + 0.4;
       const meio = h * Math.cos(elev) / 2;
-      const d = Math.max((w / 2) / Math.tan(hf / 2) + meio, (h * Math.sin(elev) / 2 + 0.5) / Math.tan(vf / 2) + meio) * 0.82;
+      const d = Math.max(((w / 2) / Math.tan(hf / 2) + meio) * 1.04, ((h * Math.sin(elev) / 2 + 0.5) / Math.tan(vf / 2) + meio) * 0.8);
       return { pos: new T.Vector3(0, d * Math.sin(elev), d * Math.cos(elev)), olhar: new T.Vector3(0, 0, -h * 0.04) };
     }
     if (this.modo === "cima") {
@@ -875,6 +884,10 @@ class Cena {
     this.luz.material.emissiveIntensity = 0.6 + Math.sin(t * 4) * 0.4;
     if (this.feixe.material.opacity > 0) this.feixe.material.opacity = Math.max(0, this.feixe.material.opacity - dt * 0.9);
     this.animarEfeitos(dt);
+    if (this.lab && this.modo === "geral") {
+      const { dx, dy, w, h } = this.deslocamento();
+      this.camera.setViewOffset(w, h, -dx, -dy, w, h);
+    } else if (this.camera.view?.enabled) this.camera.clearViewOffset();
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -966,6 +979,10 @@ try { cena = new Cena($("cena")); } catch (err) {
   $("cena").append(el("p", { style: "padding:80px 20px;color:#8d96ab;text-align:center", text: "Não foi possível abrir a cena 3D neste navegador (WebGL desligado)." }));
 }
 let labAtual = lerLabirinto(fase().labirinto);
+if (cena) cena.reserva = () => {
+  const c = $("cartao").getBoundingClientRect(), h = $("cena").getBoundingClientRect();
+  return { x: Math.max(0, c.right - h.left + 8), y: Math.max(0, c.bottom - h.top + 8) };
+};
 
 const CAMS = [["geral", "Visão geral"], ["seguir", "Seguir o robô"], ["atras", "Atrás do robô"], ["cima", "Vista de cima"]];
 function rotuloCamera() { $("btCam").replaceChildren(icone(IC.cam, 16), el("span", { text: CAMS.find(([m]) => m === cena?.modo)?.[1] ?? "Câmera" })); }
